@@ -1,6 +1,0 @@
-src/**
-out/**
-tsconfig*.json
-esbuild*.mts
-*.tsbuildinfo
-node_modules/**

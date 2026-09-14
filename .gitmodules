@@ -1,3 +1,9 @@
 [submodule "extensions/OneDark-Pro"]
 	path = extensions/OneDark-Pro
 	url = https://github.com/Binaryify/OneDark-Pro
+[submodule "extensions/webprocessing"]
+	path = extensions/webprocessing
+	url = https://github.com/Vsprocessing/vscode-processing.git
+[submodule "extensions/isomorphic-git"]
+	path = extensions/isomorphic-git
+	url = https://github.com/Vsprocessing/vscode-isomorphic-git.git
