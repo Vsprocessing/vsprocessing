@@ -236,6 +236,11 @@ function createGitIndexVinyls(paths: string[]): Promise<VinylFile[]> {
 					return e(err);
 				}
 
+				if (stat.isDirectory()) {
+					// submodule gitlinks have no blob to show
+					return c(null);
+				}
+
 				cp.exec(
 					process.platform === 'win32' ? `git show :${relativePath}` : `git show ':${relativePath}'`,
 					{ maxBuffer: Math.max(stat.size * 2, 1024 * 1024), encoding: 'buffer' },
