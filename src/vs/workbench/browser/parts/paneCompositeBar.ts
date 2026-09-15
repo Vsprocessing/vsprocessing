@@ -31,6 +31,7 @@ import { GestureEvent } from '../../../base/browser/touch.js';
 import { IPaneCompositePart } from './paneCompositePart.js';
 import { IConfigurationService } from '../../../platform/configuration/common/configuration.js';
 import { IViewsService } from '../../services/views/common/viewsService.js';
+import { IProductService } from '../../../platform/product/common/productService.js';
 
 interface IPlaceholderViewContainer {
 	readonly id: string;
@@ -94,6 +95,7 @@ export class PaneCompositeBar extends Disposable {
 	private readonly compositeActions = this._register(new DisposableMap<string, { activityAction: ViewContainerActivityAction; pinnedAction: ToggleCompositePinnedAction; badgeAction: ToggleCompositeBadgeAction; dispose: () => void }>());
 
 	private hasExtensionsRegistered: boolean = false;
+	private readonly hiddenViewContainerIds: ReadonlySet<string>;
 
 	constructor(
 		private readonly location: ViewContainerLocation,
@@ -108,8 +110,11 @@ export class PaneCompositeBar extends Disposable {
 		@IContextKeyService protected readonly contextKeyService: IContextKeyService,
 		@IWorkbenchEnvironmentService private readonly environmentService: IWorkbenchEnvironmentService,
 		@IWorkbenchLayoutService protected readonly layoutService: IWorkbenchLayoutService,
+		@IProductService productService: IProductService,
 	) {
 		super();
+
+		this.hiddenViewContainerIds = new Set(productService.hiddenViewContainers);
 
 		this.dndHandler = new CompositeDragAndDrop(this.viewDescriptorService, this.location, this.options.orientation,
 			async (id: string, focus?: boolean) => { return await this.paneCompositePart.openPaneComposite(id, focus) ?? null; },
@@ -241,7 +246,7 @@ export class PaneCompositeBar extends Disposable {
 
 	private onDidChangeViewContainers(added: readonly { container: ViewContainer; location: ViewContainerLocation }[], removed: readonly { container: ViewContainer; location: ViewContainerLocation }[]) {
 		removed.filter(({ location }) => location === this.location).forEach(({ container }) => this.onDidDeregisterViewContainer(container));
-		this.onDidRegisterViewContainers(added.filter(({ location }) => location === this.location).map(({ container }) => container));
+		this.onDidRegisterViewContainers(added.filter(({ location, container }) => location === this.location && !this.hiddenViewContainerIds.has(container.id)).map(({ container }) => container));
 	}
 
 	private onDidChangeViewContainerLocation(container: ViewContainer, from: ViewContainerLocation, to: ViewContainerLocation) {
@@ -249,7 +254,7 @@ export class PaneCompositeBar extends Disposable {
 			this.onDidDeregisterViewContainer(container);
 		}
 
-		if (to === this.location) {
+		if (to === this.location && !this.hiddenViewContainerIds.has(container.id)) {
 			this.onDidRegisterViewContainers([container]);
 		}
 	}
@@ -515,12 +520,15 @@ export class PaneCompositeBar extends Disposable {
 	}
 
 	private getViewContainer(id: string): ViewContainer | undefined {
+		if (this.hiddenViewContainerIds.has(id)) {
+			return undefined;
+		}
 		const viewContainer = this.viewDescriptorService.getViewContainerById(id);
 		return viewContainer && this.viewDescriptorService.getViewContainerLocation(viewContainer) === this.location ? viewContainer : undefined;
 	}
 
 	private getViewContainers(): readonly ViewContainer[] {
-		return this.viewDescriptorService.getViewContainersByLocation(this.location);
+		return this.viewDescriptorService.getViewContainersByLocation(this.location).filter(({ id }) => !this.hiddenViewContainerIds.has(id));
 	}
 
 	private updateCompositeBarItemsFromStorage(retainExisting: boolean): void {
@@ -615,7 +623,7 @@ export class PaneCompositeBar extends Disposable {
 	private _cachedViewContainers: ICachedViewContainer[] | undefined = undefined;
 	private get cachedViewContainers(): ICachedViewContainer[] {
 		if (this._cachedViewContainers === undefined) {
-			this._cachedViewContainers = this.getPinnedViewContainers();
+			this._cachedViewContainers = this.getPinnedViewContainers().filter(({ id }) => !this.hiddenViewContainerIds.has(id));
 			for (const placeholderViewContainer of this.getPlaceholderViewContainers()) {
 				const cachedViewContainer = this._cachedViewContainers.find(cached => cached.id === placeholderViewContainer.id);
 				if (cachedViewContainer) {

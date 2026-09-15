@@ -99,6 +99,11 @@ interface IUserFriendlyViewDescriptor {
 
 	initialSize?: number;
 
+	/**
+	 * Position of the view within its container. Only respected for built-in extensions.
+	 */
+	order?: number;
+
 	// From 'remoteViewDescriptor' type
 	group?: string;
 	remoteName?: string | string[];
@@ -168,6 +173,10 @@ const viewDescriptor: IJSONSchema = {
 		initialSize: {
 			type: 'number',
 			description: localize('vscode.extension.contributs.view.size', "The initial size of the view. The size will behave like the css 'flex' property, and will set the initial size when the view is first shown. In the side bar, this is the height of the view. This value is only respected when the same extension owns both the view and the view container."),
+		},
+		order: {
+			type: 'number',
+			description: localize('vscode.extension.contributes.view.order', "The position of the view within its view container, relative to the container's other views. Only respected for built-in extensions."),
 		},
 		accessibilityHelpContent: {
 			type: 'string',
@@ -480,11 +489,15 @@ class ViewsExtensionHandler implements IWorkbenchContribution {
 						continue;
 					}
 
-					const order = ExtensionIdentifier.equals(extension.description.identifier, container.extensionId)
-						? index + 1
-						: container.viewOrderDelegate
-							? container.viewOrderDelegate.getOrder(item.group)
-							: undefined;
+					// Built-in extensions may place, size, and expand their views in any container.
+					const isBuiltin = extension.description.isBuiltin;
+					const order = isBuiltin && typeof item.order === 'number'
+						? item.order
+						: ExtensionIdentifier.equals(extension.description.identifier, container.extensionId)
+							? index + 1
+							: container.viewOrderDelegate
+								? container.viewOrderDelegate.getOrder(item.group)
+								: undefined;
 
 					let icon: ThemeIcon | URI | undefined;
 					if (typeof item.icon === 'string') {
@@ -501,7 +514,7 @@ class ViewsExtensionHandler implements IWorkbenchContribution {
 
 					let weight: number | undefined = undefined;
 					if (typeof item.initialSize === 'number') {
-						if (container.extensionId?.value === extension.description.identifier.value) {
+						if (isBuiltin || container.extensionId?.value === extension.description.identifier.value) {
 							weight = item.initialSize;
 						} else {
 							this.logService.warn(`${extension.description.identifier.value} tried to set the view size of ${item.id} but it was ignored because the view container does not belong to it.`);
@@ -524,7 +537,7 @@ class ViewsExtensionHandler implements IWorkbenchContribution {
 						canToggleVisibility: true,
 						canMoveView: viewContainer?.id !== REMOTE,
 						treeView: type === ViewType.Tree ? this.instantiationService.createInstance(CustomTreeView, item.id, item.name, extension.description.identifier.value) : undefined,
-						collapsed: this.showCollapsed(container) || initialVisibility === InitialVisibility.Collapsed,
+						collapsed: (this.showCollapsed(container) && !(isBuiltin && item.visibility === InitialVisibility.Visible)) || initialVisibility === InitialVisibility.Collapsed,
 						order: order,
 						extensionId: extension.description.identifier,
 						originalContainerId: key,

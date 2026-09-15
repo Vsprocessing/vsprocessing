@@ -160,6 +160,22 @@
 			"type": "light"
 		}
 	],
+	"linkProtectionTrustedDomains": [
+		"https://github.com"
+	],
+	"trustedExtensionAuthAccess": {
+		"isomorphic-git.github": [
+			"0xgg.vscode-isomorphic-git"
+		]
+	},
+	"hiddenViewContainers": [
+		"workbench.view.debug",
+		"workbench.view.extensions",
+		"workbench.view.extension.test",
+		"workbench.view.remote",
+		"workbench.view.editSessions",
+		"workbench.view.sync"
+	],
 	"builtInExtensionsEnabledWithAutoUpdates": [],
 	"sessionsWindowAllowedExtensions": []
 }

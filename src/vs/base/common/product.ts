@@ -97,6 +97,10 @@ export interface IProductConfiguration {
 	readonly webUrl?: string;
 	readonly webEndpointUrlTemplate?: string;
 	readonly webviewContentExternalBaseUrlTemplate?: string;
+	/**
+	 * Ids of view containers that are never shown in the activity bar or sidebar composite bar.
+	 */
+	readonly hiddenViewContainers?: readonly string[];
 	readonly target?: string;
 	readonly nlsCoreBaseUrl?: string;
 
