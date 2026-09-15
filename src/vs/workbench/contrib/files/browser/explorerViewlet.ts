@@ -30,7 +30,7 @@ import { KeyChord, KeyMod, KeyCode } from '../../../../base/common/keyCodes.js';
 import { Registry } from '../../../../platform/registry/common/platform.js';
 import { IProgressService, ProgressLocation } from '../../../../platform/progress/common/progress.js';
 import { SyncDescriptor } from '../../../../platform/instantiation/common/descriptors.js';
-import { WorkbenchStateContext, RemoteNameContext, OpenFolderWorkspaceSupportContext } from '../../../common/contextkeys.js';
+import { WorkbenchStateContext, RemoteNameContext, OpenFolderWorkspaceSupportContext, HasWebFileSystemAccess } from '../../../common/contextkeys.js';
 import { IsWebContext } from '../../../../platform/contextkey/common/contextkeys.js';
 import { AddRootFolderAction, OpenFolderAction, OpenFolderViaWorkspaceAction } from '../../../browser/actions/workspaceActions.js';
 import { OpenRecentAction } from '../../../browser/actions/windowActions.js';
@@ -279,8 +279,9 @@ const openRecent = localize('openRecent', "Open Recent");
 const addRootFolderButton = `[${openFolder}](command:${AddRootFolderAction.ID})`;
 const addAFolderButton = `[${addAFolder}](command:${AddRootFolderAction.ID})`;
 const openFolderButton = `[${openFolder}](command:${OpenFolderAction.ID})`;
-const openFolderViaWorkspaceButton = `[${openFolder}](command:${OpenFolderViaWorkspaceAction.ID})`;
 const openRecentButton = `[${openRecent}](command:${OpenRecentAction.ID})`;
+const openLocalFolderViaWorkspaceButton = `[${localize('openLocalFolder', "Open Local Folder")}](command:${OpenFolderViaWorkspaceAction.ID})`;
+const openVirtualFolderButton = `[${localize('openVirtualFolder', "Open Virtual Folder")}](command:vfs.openFolder)`;
 
 const viewsRegistry = Registry.as<IViewsRegistry>(Extensions.ViewsRegistry);
 viewsRegistry.registerViewWelcomeContent(EmptyView.ID, {
@@ -297,13 +298,29 @@ viewsRegistry.registerViewWelcomeContent(EmptyView.ID, {
 });
 
 viewsRegistry.registerViewWelcomeContent(EmptyView.ID, {
-	content: localize({ key: 'noFolderHelpWeb', comment: ['Please do not translate the word "command", it is part of our internal syntax which must not change'] },
-		"You have not yet opened a folder.\n{0}\n{1}", openFolderViaWorkspaceButton, openRecentButton),
+	content: localize({ key: 'noFolderHelpWebVirtual', comment: ['Please do not translate the word "command", it is part of our internal syntax which must not change'] },
+		"You have not yet opened a folder.\n{0}\n{1}\n{2}", openLocalFolderViaWorkspaceButton, openVirtualFolderButton, openRecentButton),
 	when: ContextKeyExpr.and(
 		// inside a .code-workspace
 		WorkbenchStateContext.isEqualTo('workspace'),
 		// we cannot enter workspaces (e.g. web serverless)
-		OpenFolderWorkspaceSupportContext.toNegated()
+		OpenFolderWorkspaceSupportContext.toNegated(),
+		// the browser can open local folders
+		ContextKeyExpr.or(IsWebContext.toNegated(), HasWebFileSystemAccess)
+	),
+	group: ViewContentGroups.Open,
+	order: 1
+});
+
+viewsRegistry.registerViewWelcomeContent(EmptyView.ID, {
+	content: localize({ key: 'noFolderHelpWebVirtualOnly', comment: ['Please do not translate the word "command", it is part of our internal syntax which must not change'] },
+		"You have not yet opened a folder.\n{0}\n{1}", openVirtualFolderButton, openRecentButton),
+	when: ContextKeyExpr.and(
+		WorkbenchStateContext.isEqualTo('workspace'),
+		OpenFolderWorkspaceSupportContext.toNegated(),
+		// local folders cannot be opened in this browser
+		IsWebContext,
+		HasWebFileSystemAccess.toNegated()
 	),
 	group: ViewContentGroups.Open,
 	order: 1

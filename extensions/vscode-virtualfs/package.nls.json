@@ -1,0 +1,8 @@
+{
+	"displayName": "Virtual File System",
+	"description": "Folders stored in the browser (vfs:), used for cloned repositories and projects without a local folder.",
+	"command.category": "Virtual File System",
+	"command.openFolder": "Open Virtual Folder...",
+	"command.newFolder": "New Virtual Folder...",
+	"command.manage": "Manage Virtual Folders..."
+}

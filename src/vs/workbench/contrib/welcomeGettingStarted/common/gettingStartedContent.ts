@@ -144,13 +144,24 @@ export const startEntries: GettingStartedStartEntryContent = [
 	},
 	{
 		id: 'topLevelOpenFolderWeb',
-		title: localize('gettingStarted.openFolder.title', "Open Folder..."),
-		description: localize('gettingStarted.openFolder.description', "Open a folder to start working"),
+		title: localize('gettingStarted.openLocalFolder.title', "Open Local Folder..."),
+		description: localize('gettingStarted.openLocalFolder.description', "Open a folder from this computer"),
 		icon: Codicon.folderOpened,
-		when: '!openFolderWorkspaceSupport && workbenchState == \'workspace\'',
+		when: '!openFolderWorkspaceSupport && workbenchState == \'workspace\' && (!isWeb || hasWebFileSystemAccess)',
 		content: {
 			type: 'startEntry',
 			command: 'command:workbench.action.files.openFolderViaWorkspace',
+		}
+	},
+	{
+		id: 'topLevelOpenVirtualFolderWeb',
+		title: localize('gettingStarted.openVirtualFolder.title', "Open Virtual Folder..."),
+		description: localize('gettingStarted.openVirtualFolder.description', "Open a folder stored in the browser"),
+		icon: Codicon.folderLibrary,
+		when: 'isWeb && !openFolderWorkspaceSupport && workbenchState == \'workspace\'',
+		content: {
+			type: 'startEntry',
+			command: 'command:vfs.openFolder',
 		}
 	},
 	{
@@ -162,17 +173,6 @@ export const startEntries: GettingStartedStartEntryContent = [
 		content: {
 			type: 'startEntry',
 			command: 'command:git.clone',
-		}
-	},
-	{
-		id: 'topLevelGitOpen',
-		title: localize('gettingStarted.topLevelGitOpen.title', "Open Repository..."),
-		description: localize('gettingStarted.topLevelGitOpen.description', "Connect to a remote repository or pull request to browse, search, edit, and commit"),
-		when: 'workspacePlatform == \'webworker\'',
-		icon: Codicon.sourceControl,
-		content: {
-			type: 'startEntry',
-			command: 'command:remoteHub.openRepository',
 		}
 	},
 	{
@@ -291,7 +291,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 				{
 					id: 'pickAFolderTask-WebWeb',
 					title: localize('gettingStarted.setup.OpenFolder.title', "Open up your code"),
-					description: localize('gettingStarted.setup.OpenFolderWeb.description.interpolated', "You're all set to start coding. You can open a local project or a remote repository to get your files into VS Code.\n{0}\n{1}", Button(localize('openFolder', "Open Folder"), 'command:workbench.action.addRootFolder'), Button(localize('openRepository', "Open Repository"), 'command:remoteHub.openRepository')),
+					description: localize('gettingStarted.setup.OpenFolderWeb.description.interpolated', "You're all set to start coding. You can open a local project or a remote repository to get your files into VS Code.\n{0}\n{1}", Button(localize('openLocalFolder', "Open Local Folder"), 'command:workbench.action.addRootFolder'), Button(localize('openVirtualFolder', "Open Virtual Folder"), 'command:vfs.openFolder')),
 					when: 'workspaceFolderCount == 0',
 					media: {
 						type: 'svg', altText: 'Explorer view showing buttons for opening folder and cloning repository.', path: 'openFolder.svg'

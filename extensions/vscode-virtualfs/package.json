@@ -1,0 +1,60 @@
+{
+  "name": "vscode-virtualfs",
+  "displayName": "%displayName%",
+  "description": "%description%",
+  "version": "1.0.0",
+  "publisher": "vsprocessing",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onFileSystem:vfs",
+    "onStartupFinished"
+  ],
+  "browser": "./dist/browser/extension.js",
+  "capabilities": {
+    "virtualWorkspaces": true,
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "vfs.openFolder",
+        "title": "%command.openFolder%",
+        "category": "%command.category%",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "vfs.newFolder",
+        "title": "%command.newFolder%",
+        "category": "%command.category%",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "vfs.manage",
+        "title": "%command.manage%",
+        "category": "%command.category%",
+        "icon": "$(settings-gear)"
+      }
+    ],
+    "resourceLabelFormatters": [
+      {
+        "scheme": "vfs",
+        "formatting": {
+          "label": "vfs:${path}",
+          "separator": "/",
+          "workspaceSuffix": ""
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "node ./esbuild.browser.mts"
+  }
+}
