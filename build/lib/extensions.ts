@@ -155,8 +155,11 @@ function fromLocalEsbuild(extensionPath: string, esbuildConfigFileName: string):
 	// Extensions built with esbuild can still externalize runtime dependencies.
 	// Ensure those externals are included in the packaged built-in extension.
 	const packagedDependenciesByExtension: Record<string, string[]> = {
-		'git': ['@vscode/fs-copyfile']
+		'git': ['@vscode/fs-copyfile'],
+		// Runtime assets (compiler wasm/jars, JDT) loaded by URL from node_modules at runtime
+		'webprocessing': ['@worldeditaxe/teavm-javac', 'eclipse-jdt-ls-web']
 	};
+	const packagedDependencyExcludes = /(^|\/)demo\/|\.(map|teadbg|teavmdbg|ts)$|(^|\/)(tsconfig\.json|README\.md)$/;
 	const packagedDependencies = packagedDependenciesByExtension[extensionName] ?? [];
 
 	const esbuildScript = path.join(extensionPath, esbuildConfigFileName);
@@ -188,6 +191,9 @@ function fromLocalEsbuild(extensionPath: string, esbuildConfigFileName: string):
 				glob.sync(path.join(extensionPath, 'node_modules', dependency, '**'), { nodir: true, dot: true })
 					.map(filePath => path.relative(extensionPath, filePath))
 					.filter(filePath => {
+						if (packagedDependencyExcludes.test(filePath.split(path.sep).join('/'))) {
+							return false;
+						}
 						// Exclude non-.node files from build directories to avoid timestamp-sensitive
 						// artifacts (e.g. Makefile) that break macOS universal builds due to SHA mismatches.
 						const parts = filePath.split(path.sep);

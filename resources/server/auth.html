@@ -1,0 +1,43 @@
+<!-- Copyright (C) Microsoft Corporation. All rights reserved. -->
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="referrer" content="no-referrer" />
+		<title>Signing in...</title>
+	</head>
+	<body>
+		<p id="message">Signing in...</p>
+		<script>
+			// GitHub redirects here with ?code&state. The state carries the VS Code callback URL
+			// to return to; only same-origin callback pages are accepted.
+			(function () {
+				const params = new URLSearchParams(location.search);
+				const state = params.get('state') || '';
+				let target;
+				try {
+					const base64 = state.replace(/-/g, '+').replace(/_/g, '/');
+					const binary = atob(base64 + '='.repeat((4 - (base64.length % 4)) % 4));
+					const json = new TextDecoder().decode(Uint8Array.from(binary, char => char.charCodeAt(0)));
+					target = new URL(JSON.parse(json).r);
+				} catch {
+					target = undefined;
+				}
+				if (target && target.pathname.endsWith('/')) {
+					target.pathname += 'callback';
+				}
+				if (!target || target.origin !== location.origin || !target.pathname.endsWith('/callback') || !target.searchParams.has('vscode-reqid')) {
+					document.getElementById('message').textContent = 'Invalid sign-in request.';
+					return;
+				}
+				for (const key of ['code', 'error', 'error_description', 'state']) {
+					const value = params.get(key);
+					if (value) {
+						target.searchParams.set(key, value);
+					}
+				}
+				location.replace(target.toString());
+			})();
+		</script>
+	</body>
+</html>

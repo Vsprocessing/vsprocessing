@@ -225,6 +225,7 @@ function packageTask(sourceFolderName: string, destinationFolderName: string) {
 
 		const favicon = gulp.src('resources/server/favicon.ico', { base: 'resources/server' });
 		const manifest = gulp.src('resources/server/manifest.json', { base: 'resources/server' });
+		const auth = gulp.src('resources/server/auth.html', { base: 'resources/server' });
 		const pwaicons = es.merge(
 			gulp.src('resources/server/code-192.png', { base: 'resources/server' }),
 			gulp.src('resources/server/code-512.png', { base: 'resources/server' })
@@ -237,6 +238,7 @@ function packageTask(sourceFolderName: string, destinationFolderName: string) {
 			deps,
 			favicon,
 			manifest,
+			auth,
 			pwaicons
 		);
 

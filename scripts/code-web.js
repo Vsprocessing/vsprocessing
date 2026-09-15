@@ -16,6 +16,8 @@ const fancyLog = require('fancy-log');
 const ansiColors = require('ansi-colors');
 const open = require('open');
 const https = require('https');
+const http = require('http');
+const net = require('net');
 
 const APP_ROOT = path.join(__dirname, '..');
 const WEB_DEV_EXTENSIONS_ROOT = path.join(APP_ROOT, '.build', 'builtInWebDevExtensions');
@@ -55,12 +57,9 @@ async function main() {
 	const HOST = args['host'] ?? 'localhost';
 	const PORT = args['port'] ?? '8080';
 
-	if (args['host'] === undefined) {
-		serverArgs.push('--host', HOST);
-	}
-	if (args['port'] === undefined) {
-		serverArgs.push('--port', PORT);
-	}
+	// test-web listens on loopback behind a front server that also serves /auth (GitHub OAuth redirect).
+	const internalPort = await findFreePort();
+	serverArgs.push('--host', '127.0.0.1', '--port', String(internalPort));
 
 	// only use `./scripts/code-web.sh --playground` to add vscode-web-playground extension by default.
 	if (args['playground'] === true) {
@@ -79,12 +78,64 @@ async function main() {
 
 	serverArgs.push('--sourcesPath', APP_ROOT);
 
-	serverArgs.push(...process.argv.slice(2).filter(v => !v.startsWith('--playground') && v !== '--no-playground'));
+	serverArgs.push(...withoutHostAndPort(process.argv.slice(2)).filter(v => !v.startsWith('--playground') && v !== '--no-playground'));
 
 	startServer(serverArgs);
+	startFrontServer(HOST, Number(PORT), internalPort);
 	if (openSystemBrowser) {
 		open.default(`http://${HOST}:${PORT}/`);
 	}
+}
+
+function withoutHostAndPort(argv) {
+	const result = [];
+	for (let i = 0; i < argv.length; i++) {
+		if (argv[i] === '--host' || argv[i] === '--port') {
+			i++;
+		} else if (!argv[i].startsWith('--host=') && !argv[i].startsWith('--port=')) {
+			result.push(argv[i]);
+		}
+	}
+	return result;
+}
+
+function findFreePort() {
+	return new Promise((resolve, reject) => {
+		const server = net.createServer();
+		server.on('error', reject);
+		server.listen(0, '127.0.0.1', () => {
+			const { port } = server.address();
+			server.close(() => resolve(port));
+		});
+	});
+}
+
+function startFrontServer(host, port, internalPort) {
+	const server = http.createServer((req, res) => {
+		const url = new URL(req.url, 'http://localhost');
+		const path = url.pathname === '/auth' ? `/static/sources/auth.html${url.search}` : req.url;
+		const upstream = http.request({ host: '127.0.0.1', port: internalPort, method: req.method, path, headers: req.headers }, upstreamRes => {
+			res.writeHead(upstreamRes.statusCode, upstreamRes.headers);
+			upstreamRes.pipe(res);
+		});
+		upstream.on('error', () => {
+			if (!res.headersSent) {
+				res.writeHead(502);
+			}
+			res.end();
+		});
+		req.pipe(upstream);
+	});
+	server.on('upgrade', (req, socket, head) => {
+		const upstream = net.connect(internalPort, '127.0.0.1', () => {
+			upstream.write(`${req.method} ${req.url} HTTP/${req.httpVersion}\r\n${Object.entries(req.headers).map(([key, value]) => `${key}: ${value}`).join('\r\n')}\r\n\r\n`);
+			upstream.write(head);
+			socket.pipe(upstream).pipe(socket);
+		});
+		upstream.on('error', () => socket.destroy());
+		socket.on('error', () => upstream.destroy());
+	});
+	server.listen(port, host, () => console.log(`Serving VS Code Web on http://${host}:${port}`));
 }
 
 function startServer(runnerArguments) {
