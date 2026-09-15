@@ -231,8 +231,10 @@ export class ExtHostConsumerFileSystem {
 			throw FileSystemError.Unavailable(err.message);
 		}
 
-		// file system error
-		switch (err.name) {
+		// file system error: the code is either the error name itself or encoded in the name as
+		// `<code> (FileSystemError)` (see markAsFileSystemProviderError)
+		const markedCode = files.toFileSystemProviderErrorCode(err);
+		switch (markedCode !== files.FileSystemProviderErrorCode.Unknown ? markedCode : err.name) {
 			case files.FileSystemProviderErrorCode.FileExists: throw FileSystemError.FileExists(err.message);
 			case files.FileSystemProviderErrorCode.FileNotFound: throw FileSystemError.FileNotFound(err.message);
 			case files.FileSystemProviderErrorCode.FileNotADirectory: throw FileSystemError.FileNotADirectory(err.message);
