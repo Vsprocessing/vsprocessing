@@ -22,6 +22,7 @@ import { memoize } from '../../../../base/common/decorators.js';
 import { parseLineAndColumnAware } from '../../../../base/common/extpath.js';
 import { IWorkspaceFolderCreationData } from '../../../../platform/workspaces/common/workspaces.js';
 import { IWorkspaceEditingService } from '../../workspaces/common/workspaceEditing.js';
+import { IUriIdentityService } from '../../../../platform/uriIdentity/common/uriIdentity.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { ILifecycleService, BeforeShutdownEvent, ShutdownReason } from '../../lifecycle/common/lifecycle.js';
 import { BrowserLifecycleService } from '../../lifecycle/browser/lifecycleService.js';
@@ -32,7 +33,7 @@ import Severity from '../../../../base/common/severity.js';
 import { IDialogService } from '../../../../platform/dialogs/common/dialogs.js';
 import { DomEmitter } from '../../../../base/browser/event.js';
 import { isUndefined } from '../../../../base/common/types.js';
-import { isTemporaryWorkspace, IWorkspaceContextService, toWorkspaceIdentifier } from '../../../../platform/workspace/common/workspace.js';
+import { isTemporaryWorkspace, IWorkspaceContextService, toWorkspaceIdentifier, WorkbenchState } from '../../../../platform/workspace/common/workspace.js';
 import { ServicesAccessor } from '../../../../editor/browser/editorExtensions.js';
 import { Schemas } from '../../../../base/common/network.js';
 import { ITextEditorOptions } from '../../../../platform/editor/common/editor.js';
@@ -265,7 +266,12 @@ export class BrowserHostService extends Disposable implements IHostService {
 				} else if (options?.removeMode) {
 					foldersToRemove.push(openable.folderUri);
 				} else {
-					this.doOpen({ folderUri: openable.folderUri }, { reuse: this.shouldReuse(options, false /* no file */), payload });
+					const reuse = this.shouldReuse(options, false /* no file */);
+					if (reuse && !payload && this.canReplaceFoldersInPlace()) {
+						this.doReplaceFoldersInPlace(openable.folderUri);
+					} else {
+						this.doOpen({ folderUri: openable.folderUri }, { reuse, payload });
+					}
 				}
 			}
 
@@ -458,6 +464,29 @@ export class BrowserHostService extends Disposable implements IHostService {
 		}
 
 		return this.labelService.getUriLabel(openable.fileUri, { appendWorkspaceSuffix: true });
+	}
+
+	/**
+	 * Whether the window shows a temporary workspace, whose folders can be swapped without a
+	 * page load. Navigating to a folder instead throws the page away together with everything
+	 * that only lives in memory, such as a sign-in.
+	 */
+	private canReplaceFoldersInPlace(): boolean {
+		return this.contextService.getWorkbenchState() === WorkbenchState.WORKSPACE && isTemporaryWorkspace(this.contextService.getWorkspace());
+	}
+
+	private doReplaceFoldersInPlace(folderUri: URI): void {
+		this.withServices(async accessor => {
+			const workspaceEditingService = accessor.get(IWorkspaceEditingService);
+			const uriIdentityService = accessor.get(IUriIdentityService);
+			const folders = this.contextService.getWorkspace().folders;
+			if (folders.length !== 1 || !uriIdentityService.extUri.isEqual(folders[0].uri, folderUri)) {
+				await workspaceEditingService.updateFolders(0, folders.length, [{ uri: folderUri }]);
+			}
+
+			// Keep the address bar pointing at the folder so that a refresh opens it again
+			this.workspaceProvider.updateAddressBar?.({ folderUri });
+		});
 	}
 
 	private shouldReuse(options: IOpenWindowOptions = Object.create(null), isFile: boolean): boolean {

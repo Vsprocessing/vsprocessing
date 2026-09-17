@@ -415,6 +415,12 @@ export interface IWorkspaceProvider {
 	readonly payload?: object;
 
 	/**
+	 * Folders to put into a temporary [workspace](#IWorkspaceProvider.workspace) when the window
+	 * starts. Folders of a temporary workspace can be swapped without a page load.
+	 */
+	readonly initialFolders?: readonly URI[];
+
+	/**
 	 * Return `true` if the provided [workspace](#IWorkspaceProvider.workspace) is trusted, `false` if not trusted, `undefined` if unknown.
 	 */
 	readonly trusted: boolean | undefined;
@@ -432,6 +438,14 @@ export interface IWorkspaceProvider {
 	 * @returns true if successfully opened, false otherwise.
 	 */
 	open(workspace: IWorkspace, options?: { reuse?: boolean; payload?: object }): Promise<boolean>;
+
+	/**
+	 * Asks to point the address bar at a workspace that the window switched to without a page
+	 * load, so that reloading the page restores that same workspace.
+	 *
+	 * @param workspace the workspace the window is now showing.
+	 */
+	updateAddressBar?(workspace: IWorkspace): void;
 }
 
 export interface IResourceUriProvider {

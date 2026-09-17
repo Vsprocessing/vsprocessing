@@ -609,8 +609,9 @@ export class BrowserMain extends Disposable {
 
 		if (isWorkspaceIdentifier(workspace) && isTemporaryWorkspace(workspace.configPath)) {
 			try {
-				const emptyWorkspace: IStoredWorkspace = { folders: [] };
-				await fileService.createFile(workspace.configPath, VSBuffer.fromString(JSON.stringify(emptyWorkspace, null, '\t')), { overwrite: false });
+				const folders = (this.configuration.workspaceProvider?.initialFolders ?? []).map(folderUri => ({ uri: folderUri.toString() }));
+				const initialWorkspace: IStoredWorkspace = { folders };
+				await fileService.createFile(workspace.configPath, VSBuffer.fromString(JSON.stringify(initialWorkspace, null, '\t')), { overwrite: false });
 			} catch (error) {
 				// ignore if workspace file already exists
 			}

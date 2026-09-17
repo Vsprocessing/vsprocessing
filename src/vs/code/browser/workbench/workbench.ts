@@ -478,7 +478,15 @@ class WorkspaceProvider implements IWorkspaceProvider {
 			}
 		}
 
-		return new WorkspaceProvider(workspace, payload, config);
+		// Open a folder inside the server's temporary workspace rather than as the workspace
+		// itself, so that switching to another folder later does not need a page load.
+		let initialFolders: URI[] | undefined;
+		if (workspace && isFolderToOpen(workspace) && config.workspaceUri && URI.revive(config.workspaceUri).scheme === Schemas.tmp) {
+			initialFolders = [workspace.folderUri];
+			workspace = { workspaceUri: URI.revive(config.workspaceUri) };
+		}
+
+		return new WorkspaceProvider(workspace, payload, config, initialFolders);
 	}
 
 	readonly trusted = true;
@@ -486,7 +494,8 @@ class WorkspaceProvider implements IWorkspaceProvider {
 	private constructor(
 		readonly workspace: IWorkspace,
 		readonly payload: object,
-		private readonly config: IWorkbenchConstructionOptions
+		private readonly config: IWorkbenchConstructionOptions,
+		readonly initialFolders?: readonly URI[]
 	) {
 	}
 
@@ -513,6 +522,13 @@ class WorkspaceProvider implements IWorkspaceProvider {
 		}
 
 		return false;
+	}
+
+	updateAddressBar(workspace: IWorkspace): void {
+		const targetHref = this.createTargetUrl(workspace);
+		if (targetHref) {
+			mainWindow.history.replaceState(null, '', targetHref);
+		}
 	}
 
 	private createTargetUrl(workspace: IWorkspace, options?: { reuse?: boolean; payload?: object }): string | undefined {
