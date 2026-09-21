@@ -16,7 +16,7 @@ import { InMemoryStorageDatabase, isStorageItemsChangeEvent, IStorage, IStorageD
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { AbstractStorageService, isProfileUsingDefaultStorage, IS_NEW_KEY, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
 import { isUserDataProfile, IUserDataProfile } from '../../../../platform/userDataProfile/common/userDataProfile.js';
-import { IAnyWorkspaceIdentifier } from '../../../../platform/workspace/common/workspace.js';
+import { IAnyWorkspaceIdentifier, isTemporaryWorkspace, isWorkspaceIdentifier } from '../../../../platform/workspace/common/workspace.js';
 import { IUserDataProfileService } from '../../userDataProfile/common/userDataProfile.js';
 
 export class BrowserStorageService extends AbstractStorageService {
@@ -34,6 +34,9 @@ export class BrowserStorageService extends AbstractStorageService {
 	private profileStorageDatabase: IIndexedDBStorageDatabase | undefined;
 	private profileStorageProfile: IUserDataProfile;
 	private readonly profileStorageDisposables = this._register(new DisposableStore());
+
+	// Guest state for the lifetime of the page, kept across switching to and from signed in profiles
+	private readonly guestProfileStorageDatabase = this._register(new InMemoryIndexedDBStorageDatabase());
 
 	private workspaceStorage: IStorage | undefined;
 	private workspaceStorageDatabase: IIndexedDBStorageDatabase | undefined;
@@ -110,7 +113,19 @@ export class BrowserStorageService extends AbstractStorageService {
 		// Remember profile associated to profile storage
 		this.profileStorageProfile = profile;
 
-		if (isProfileUsingDefaultStorage(this.profileStorageProfile)) {
+		if (this.profileStorageProfile.isDefault) {
+
+			// The default profile is the guest profile: its state only lives for the session
+
+			this.profileStorageDatabase = this.guestProfileStorageDatabase;
+			this.profileStorage = this.profileStorageDisposables.add(new Storage(this.profileStorageDatabase));
+
+			this.profileStorageDisposables.add(this.profileStorage.onDidChangeStorage(e => this.emitDidChangeValue(StorageScope.PROFILE, e)));
+
+			await this.profileStorage.init();
+
+			this.updateIsNew(this.profileStorage);
+		} else if (isProfileUsingDefaultStorage(this.profileStorageProfile)) {
 
 			// If we are using default profile storage, the profile storage is
 			// actually the same as application storage. As such we
@@ -138,7 +153,12 @@ export class BrowserStorageService extends AbstractStorageService {
 	}
 
 	private async createWorkspaceStorage(): Promise<void> {
-		const workspaceStorageIndexedDB = await IndexedDBStorageDatabase.createWorkspaceStorage(this.workspace.id, this.logService);
+
+		// The temporary workspace is shared by every session in this browser, guest or signed
+		// in, so its state (such as open editors) is not carried over to the next session
+		const workspaceStorageIndexedDB = isWorkspaceIdentifier(this.workspace) && isTemporaryWorkspace(this.workspace.configPath)
+			? new InMemoryIndexedDBStorageDatabase()
+			: await IndexedDBStorageDatabase.createWorkspaceStorage(this.workspace.id, this.logService);
 
 		this.workspaceStorageDatabase = this._register(workspaceStorageIndexedDB);
 		this.workspaceStorage = this._register(new Storage(this.workspaceStorageDatabase));

@@ -49,7 +49,7 @@ export class BrowserWorkspacesService extends Disposable implements IWorkspacesS
 	private registerListeners(): void {
 
 		// Storage
-		this._register(this.storageService.onDidChangeValue(StorageScope.APPLICATION, BrowserWorkspacesService.RECENTLY_OPENED_KEY, this._store)(() => this._onRecentlyOpenedChange.fire()));
+		this._register(this.storageService.onDidChangeValue(StorageScope.PROFILE, BrowserWorkspacesService.RECENTLY_OPENED_KEY, this._store)(() => this._onRecentlyOpenedChange.fire()));
 
 		// Workspace
 		this._register(this.contextService.onDidChangeWorkspaceFolders(e => this.onDidChangeWorkspaceFolders(e)));
@@ -84,7 +84,7 @@ export class BrowserWorkspacesService extends Disposable implements IWorkspacesS
 	//#region Workspaces History
 
 	async getRecentlyOpened(): Promise<IRecentlyOpened> {
-		const recentlyOpenedRaw = this.storageService.get(BrowserWorkspacesService.RECENTLY_OPENED_KEY, StorageScope.APPLICATION);
+		const recentlyOpenedRaw = this.storageService.get(BrowserWorkspacesService.RECENTLY_OPENED_KEY, StorageScope.PROFILE);
 		if (recentlyOpenedRaw) {
 			const recentlyOpened = restoreRecentlyOpened(JSON.parse(recentlyOpenedRaw), this.logService);
 			recentlyOpened.workspaces = recentlyOpened.workspaces.filter(recent => {
@@ -149,11 +149,11 @@ export class BrowserWorkspacesService extends Disposable implements IWorkspacesS
 	}
 
 	private async saveRecentlyOpened(data: IRecentlyOpened): Promise<void> {
-		return this.storageService.store(BrowserWorkspacesService.RECENTLY_OPENED_KEY, JSON.stringify(toStoreData(data)), StorageScope.APPLICATION, StorageTarget.USER);
+		return this.storageService.store(BrowserWorkspacesService.RECENTLY_OPENED_KEY, JSON.stringify(toStoreData(data)), StorageScope.PROFILE, StorageTarget.USER);
 	}
 
 	async clearRecentlyOpened(): Promise<void> {
-		this.storageService.remove(BrowserWorkspacesService.RECENTLY_OPENED_KEY, StorageScope.APPLICATION);
+		this.storageService.remove(BrowserWorkspacesService.RECENTLY_OPENED_KEY, StorageScope.PROFILE);
 	}
 
 	//#endregion

@@ -8,8 +8,15 @@ import { commands, Disposable, EventEmitter, ExtensionContext, FileChangeEvent, 
 const SCHEME = 'vfs';
 
 /**
- * `vfs:` file system for folders that live in the browser. Content is persisted in the user data
- * file system under a hidden `/vfs` folder; `vfs:/project` is stored at `vscode-userdata:/vfs/project`.
+ * Kept in every folder: the browser storage underneath only persists files, so a folder without
+ * any would be gone after a reload. Hidden from listings.
+ */
+const FOLDER_MARKER = '.vfs-folder';
+
+/**
+ * `vfs:` file system for folders that live in the browser. Content is kept in this extension's
+ * global storage, which belongs to the current profile: each signed in account has its own
+ * folders, and a guest's folders only live for the session.
  */
 class VirtualFileSystemProvider implements FileSystemProvider, Disposable {
 
@@ -39,12 +46,14 @@ class VirtualFileSystemProvider implements FileSystemProvider, Disposable {
 		return workspace.fs.stat(this.toStorage(uri));
 	}
 
-	readDirectory(uri: Uri): Thenable<[string, FileType][]> {
-		return workspace.fs.readDirectory(this.toStorage(uri));
+	async readDirectory(uri: Uri): Promise<[string, FileType][]> {
+		return (await workspace.fs.readDirectory(this.toStorage(uri))).filter(([name]) => name !== FOLDER_MARKER);
 	}
 
 	async createDirectory(uri: Uri): Promise<void> {
-		await workspace.fs.createDirectory(this.toStorage(uri));
+		const folder = this.toStorage(uri);
+		await workspace.fs.createDirectory(folder);
+		await workspace.fs.writeFile(Uri.joinPath(folder, FOLDER_MARKER), new Uint8Array());
 		this.fire(FileChangeType.Created, uri);
 	}
 
@@ -249,7 +258,7 @@ async function closeFolder(uri: Uri): Promise<void> {
 }
 
 export async function activate(context: ExtensionContext): Promise<void> {
-	const storageRoot = Uri.from({ scheme: 'vscode-userdata', path: '/vfs' });
+	const storageRoot = Uri.joinPath(context.globalStorageUri, 'folders');
 	await workspace.fs.createDirectory(storageRoot).then(undefined, () => undefined);
 
 	const provider = new VirtualFileSystemProvider(storageRoot);

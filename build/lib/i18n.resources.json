@@ -295,6 +295,10 @@
 			"project": "vscode-workbench"
 		},
 		{
+			"name": "vs/workbench/contrib/githubAccount",
+			"project": "vscode-workbench"
+		},
+		{
 			"name": "vs/workbench/contrib/welcomeOnboarding",
 			"project": "vscode-workbench"
 		},
@@ -537,6 +541,10 @@
 		{
 			"name": "vs/workbench/services/userDataProfile",
 			"project": "vscode-profiles"
+		},
+		{
+			"name": "vs/workbench/services/githubAccount",
+			"project": "vscode-workbench"
 		},
 		{
 			"name": "vs/workbench/services/localization",

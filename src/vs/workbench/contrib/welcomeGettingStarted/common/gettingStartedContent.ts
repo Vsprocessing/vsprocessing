@@ -100,6 +100,17 @@ type GettingStartedStartEntryContent = BuiltinGettingStartedStartEntry[];
 
 export const startEntries: GettingStartedStartEntryContent = [
 	{
+		id: 'topLevelSignInWithGitHub',
+		title: localize('gettingStarted.signInWithGitHub.title', "Sign in with GitHub..."),
+		description: localize('gettingStarted.signInWithGitHub.description', "Keep your settings, recent folders and virtual folders"),
+		icon: Codicon.github,
+		when: '!githubAccountSignedIn',
+		content: {
+			type: 'startEntry',
+			command: 'command:vsprocessing.github.signIn',
+		}
+	},
+	{
 		id: 'welcome.showNewFileEntries',
 		title: localize('gettingStarted.newFile.title', "New File..."),
 		description: localize('gettingStarted.newFile.description', "Open a new untitled text file, notebook, or custom editor."),

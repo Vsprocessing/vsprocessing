@@ -39,6 +39,7 @@ import { toLocalISOString } from '../../base/common/date.js';
 import { isWorkspaceToOpen, isFolderToOpen } from '../../platform/window/common/window.js';
 import { getSingleFolderWorkspaceIdentifier, getWorkspaceIdentifier } from '../../platform/workspaces/common/workspaceIdentifier.js';
 import { InMemoryFileSystemProvider } from '../../platform/files/common/inMemoryFilesystemProvider.js';
+import { GuestUserDataFileSystemProvider } from '../services/userDataProfile/browser/guestUserDataFileSystemProvider.js';
 import { ICommandService } from '../../platform/commands/common/commands.js';
 import { IndexedDBFileSystemProvider } from '../../platform/files/browser/indexedDBFileSystemProvider.js';
 import { BrowserRequestService } from '../services/request/browser/requestService.js';
@@ -343,7 +344,7 @@ export class BrowserMain extends Disposable {
 		const userDataProfilesService = new BrowserUserDataProfilesService(environmentService, fileService, uriIdentityService, logService);
 		serviceCollection.set(IUserDataProfilesService, userDataProfilesService);
 
-		const currentProfile = await this.getCurrentProfile(workspace, userDataProfilesService, environmentService);
+		const currentProfile = await this.getCurrentProfile(userDataProfilesService);
 		await userDataProfilesService.setProfileForWorkspace(workspace, currentProfile);
 		const userDataProfileService = new UserDataProfileService(currentProfile);
 		serviceCollection.set(IUserDataProfileService, userDataProfileService);
@@ -533,7 +534,8 @@ export class BrowserMain extends Disposable {
 			logService.info('Using in-memory user data provider');
 			userDataProvider = new InMemoryFileSystemProvider();
 		}
-		fileService.registerProvider(Schemas.vscodeUserData, userDataProvider);
+		// The default profile is the guest profile and only lives for the session
+		fileService.registerProvider(Schemas.vscodeUserData, indexedDB ? new GuestUserDataFileSystemProvider(userDataProvider, environmentService.userRoamingDataHome.path) : userDataProvider);
 
 		// Local file access (if supported by browser)
 		if (WebFileSystemAccess.supported(mainWindow)) {
@@ -632,16 +634,12 @@ export class BrowserMain extends Disposable {
 		}
 	}
 
-	private async getCurrentProfile(workspace: IAnyWorkspaceIdentifier, userDataProfilesService: BrowserUserDataProfilesService, environmentService: BrowserWorkbenchEnvironmentService): Promise<IUserDataProfile> {
-		const profileName = environmentService.options?.profile?.name ?? environmentService.profile;
-		if (profileName) {
-			const profile = userDataProfilesService.profiles.find(p => p.name === profileName);
-			if (profile) {
-				return profile;
-			}
-			return userDataProfilesService.createNamedProfile(profileName, undefined, workspace);
-		}
-		return userDataProfilesService.getProfileForWorkspace(workspace) ?? userDataProfilesService.defaultProfile;
+	private async getCurrentProfile(userDataProfilesService: BrowserUserDataProfilesService): Promise<IUserDataProfile> {
+
+		// Every page starts signed out, so it always starts as the guest (default) profile, whatever
+		// profile the URL asks for: an account's profile, with its settings and virtual folders, is
+		// only entered by signing in to that account.
+		return userDataProfilesService.defaultProfile;
 	}
 
 	private resolveWorkspace(): IAnyWorkspaceIdentifier {

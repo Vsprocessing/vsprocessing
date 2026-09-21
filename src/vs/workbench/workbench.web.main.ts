@@ -174,4 +174,8 @@ import './contrib/processExplorer/browser/processExplorer.web.contribution.js';
 // Browser View
 import './contrib/browserView/browser/browserView.contribution.js';
 
+// GitHub Account
+import './services/githubAccount/browser/githubAccountService.js';
+import './contrib/githubAccount/browser/githubAccount.contribution.js';
+
 //#endregion
