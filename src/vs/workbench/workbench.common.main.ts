@@ -376,7 +376,7 @@ import './contrib/authentication/browser/authentication.contribution.js';
 import './contrib/userDataSync/browser/userDataSync.contribution.js';
 
 // User Data Profiles
-import './contrib/userDataProfile/browser/userDataProfile.contribution.js';
+// Profiles are not chosen by the user: each GitHub account has its own (see githubAccount)
 
 // Continue Edit Session
 import './contrib/editSessions/browser/editSessions.contribution.js';

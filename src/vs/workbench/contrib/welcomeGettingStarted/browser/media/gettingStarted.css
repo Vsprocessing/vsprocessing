@@ -1138,3 +1138,22 @@
 .monaco-workbench .part.editor > .content .gettingStartedContainer .gettingStartedSlide .getting-started-checkbox {
 	border-color: var(--vscode-checkbox-border) !important;
 }
+
+.monaco-workbench .part.editor > .content .gettingStartedContainer .gettingStartedSlideCategories .github-sign-in {
+	width: fit-content;
+	margin-bottom: 28px;
+}
+
+.monaco-workbench .part.editor > .content .gettingStartedContainer .gettingStartedSlideCategories .github-sign-in.hidden {
+	display: none;
+}
+
+.monaco-workbench .part.editor > .content .gettingStartedContainer .gettingStartedSlideCategories .github-sign-in .monaco-button {
+	padding: 8px 20px;
+	font-size: 14px;
+	gap: 8px;
+}
+
+.monaco-workbench .part.editor > .content .gettingStartedContainer .gettingStartedSlideCategories .github-sign-in .monaco-button .codicon {
+	font-size: 18px;
+}

@@ -889,6 +889,18 @@ export class GettingStartedPage extends EditorPane {
 		parent.appendChild(this.container);
 	}
 
+	/** The way in for a guest: signing in keeps settings, recent folders and virtual folders. */
+	private buildSignInButton(): HTMLElement {
+		const container = $('.github-sign-in');
+		const button = this.categoriesSlideDisposables.add(new Button(container, { ...defaultButtonStyles, supportIcons: true }));
+		button.label = `$(github) ${localize('gettingStarted.signIn', "Sign in with GitHub")}`;
+		this.categoriesSlideDisposables.add(button.onDidClick(() => this.githubAccountService.signIn()));
+		const update = () => container.classList.toggle('hidden', !!this.githubAccountService.account);
+		update();
+		this.categoriesSlideDisposables.add(this.githubAccountService.onDidChangeAccount(update));
+		return container;
+	}
+
 	private getSubtitle(): string {
 		const account = this.githubAccountService.account;
 		return account
@@ -928,14 +940,15 @@ export class GettingStartedPage extends EditorPane {
 			layoutRecentList();
 		};
 
+		const signIn = this.buildSignInButton();
 		const layoutRecentList = () => {
 			if (this.container.classList.contains('noWalkthroughs')) {
 				recentList.setLimit(10);
-				reset(leftColumn, startList.getDomElement());
+				reset(leftColumn, signIn, startList.getDomElement());
 				reset(rightColumn, recentList.getDomElement());
 			} else {
 				recentList.setLimit(5);
-				reset(leftColumn, startList.getDomElement(), recentList.getDomElement());
+				reset(leftColumn, signIn, startList.getDomElement(), recentList.getDomElement());
 			}
 		};
 

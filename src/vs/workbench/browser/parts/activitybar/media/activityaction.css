@@ -228,3 +228,22 @@
 	left: auto;
 	right: 0;
 }
+
+/* Signed in: the account's avatar instead of the account icon */
+.monaco-workbench .activitybar > .content :not(.monaco-menu) > .monaco-action-bar .action-label.account-avatar {
+	padding: 0;
+	align-items: center;
+	justify-content: center;
+}
+
+.monaco-workbench .activitybar > .content :not(.monaco-menu) > .monaco-action-bar .action-label.account-avatar .account-avatar-image {
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	opacity: 0.8;
+}
+
+.monaco-workbench .activitybar > .content :not(.monaco-menu) > .monaco-action-bar .action-item:hover .action-label.account-avatar .account-avatar-image,
+.monaco-workbench .activitybar > .content :not(.monaco-menu) > .monaco-action-bar .action-item:focus .action-label.account-avatar .account-avatar-image {
+	opacity: 1;
+}

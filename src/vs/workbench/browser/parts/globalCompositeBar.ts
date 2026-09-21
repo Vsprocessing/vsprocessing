@@ -19,7 +19,7 @@ import { ThemeIcon } from '../../../base/common/themables.js';
 import { registerIcon } from '../../../platform/theme/common/iconRegistry.js';
 import { Action, IAction, Separator, toAction } from '../../../base/common/actions.js';
 import { IMenu, IMenuService, MenuId } from '../../../platform/actions/common/actions.js';
-import { addDisposableListener, EventType, append, clearNode, hide, show, EventHelper, $, runWhenWindowIdle, getWindow } from '../../../base/browser/dom.js';
+import { addDisposableListener, EventType, append, EventHelper, $, runWhenWindowIdle, getWindow } from '../../../base/browser/dom.js';
 import { StandardKeyboardEvent } from '../../../base/browser/keyboardEvent.js';
 import { StandardMouseEvent } from '../../../base/browser/mouseEvent.js';
 import { EventType as TouchEventType, GestureEvent } from '../../../base/browser/touch.js';
@@ -264,6 +264,7 @@ export class AccountsActivityActionViewItem extends AbstractGlobalActivityAction
 	private readonly problematicProviders: Set<string> = new Set();
 
 	private sessionFromEmbedder = new Lazy<Promise<AuthenticationSessionInfo | undefined>>(() => getCurrentAuthenticationSessionInfo(this.secretStorageService, this.productService));
+	private avatar: HTMLImageElement | undefined;
 
 	constructor(
 		contextMenuActionsProvider: () => IAction[],
@@ -297,6 +298,7 @@ export class AccountsActivityActionViewItem extends AbstractGlobalActivityAction
 		this._register(action);
 		this.registerListeners();
 		this.initialize();
+		this._register(this.githubAccountService.onDidChangeAccount(() => this.updateAvatar()));
 	}
 
 	private registerListeners(): void {
@@ -350,6 +352,43 @@ export class AccountsActivityActionViewItem extends AbstractGlobalActivityAction
 				this.logService.error(result.reason);
 			}
 		}
+	}
+
+	protected override updateLabel(): void {
+		super.updateLabel();
+		this.updateAvatar();
+	}
+
+	/** Shows the signed in account's avatar in place of the account icon. */
+	private updateAvatar(): void {
+		if (!this.label) {
+			return;
+		}
+		const avatarUrl = this.githubAccountService.account?.avatarUrl;
+		if (this.avatar && this.avatar.getAttribute('src') !== avatarUrl) {
+			this.avatar.remove();
+			this.avatar = undefined;
+		}
+
+		const iconClasses = ThemeIcon.asClassNameArray(GlobalCompositeBar.ACCOUNTS_ICON);
+		const showIcon = () => {
+			this.label.classList.remove('account-avatar');
+			this.label.classList.add(...iconClasses);
+		};
+		if (!avatarUrl) {
+			showIcon();
+			return;
+		}
+		if (!this.avatar) {
+			const avatar = this.avatar = append(this.label, $<HTMLImageElement>('img.account-avatar-image', { src: avatarUrl, alt: '' }));
+			avatar.onerror = () => {
+				avatar.remove();
+				this.avatar = undefined;
+				showIcon();
+			};
+		}
+		this.label.classList.remove(...iconClasses);
+		this.label.classList.add('account-avatar');
 	}
 
 	//#region overrides
@@ -452,9 +491,6 @@ export class AccountsActivityActionViewItem extends AbstractGlobalActivityAction
 
 export class GlobalActivityActionViewItem extends AbstractGlobalActivityActionViewItem {
 
-	private profileBadge: HTMLElement | undefined;
-	private profileBadgeContent: HTMLElement | undefined;
-
 	constructor(
 		contextMenuActionsProvider: () => IAction[],
 		options: ICompositeBarActionViewItemOptions,
@@ -486,47 +522,6 @@ export class GlobalActivityActionViewItem extends AbstractGlobalActivityActionVi
 		}));
 	}
 
-	override render(container: HTMLElement): void {
-		super.render(container);
-
-		this.profileBadge = append(container, $('.profile-badge'));
-		this.profileBadgeContent = append(this.profileBadge, $('.profile-badge-content'));
-		this.updateProfileBadge();
-	}
-
-	private updateProfileBadge(): void {
-		if (!this.profileBadge || !this.profileBadgeContent) {
-			return;
-		}
-
-		clearNode(this.profileBadgeContent);
-		hide(this.profileBadge);
-
-		if (this.userDataProfileService.currentProfile.isDefault) {
-			return;
-		}
-
-		if (this.userDataProfileService.currentProfile.icon && this.userDataProfileService.currentProfile.icon !== DEFAULT_ICON.id) {
-			return;
-		}
-
-		if ((this.action as CompositeBarAction).activities.length > 0) {
-			return;
-		}
-
-		show(this.profileBadge);
-		this.profileBadgeContent.classList.add('profile-text-overlay');
-		this.profileBadgeContent.textContent = this.userDataProfileService.currentProfile.name.substring(0, 2).toUpperCase();
-	}
-
-	protected override updateActivity(): void {
-		super.updateActivity();
-		this.updateProfileBadge();
-	}
-
-	protected override computeTitle(): string {
-		return this.userDataProfileService.currentProfile.isDefault ? super.computeTitle() : localize('manage profile', "Manage {0} (Profile)", this.userDataProfileService.currentProfile.name);
-	}
 }
 
 export class SimpleAccountActivityActionViewItem extends AccountsActivityActionViewItem {
